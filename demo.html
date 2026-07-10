@@ -1,0 +1,1577 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VKM1 Credit Order Automation · Phase 1 Demo</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --bg2: #0e1530;
+      --card: #131c38;
+      --card-edge: #1f2b52;
+      --ink: #eaf0ff;
+      --ink-dim: #93a0c4;
+      --ink-faint: #5c6a92;
+      --accent: #4f8bff;
+      --accent2: #9b5cff;
+      --green: #2fd580;
+      --amber: #ffb454;
+      --red: #ff5f6d;
+      --sap: #0faaff;
+      --pa: #2266e3;
+      --dv: #0a8f6c;
+      --glow: 0 0 24px rgba(79, 139, 255, .35);
+      font-size: 16px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    html,
+    body {
+      height: 100%
+    }
+
+    body {
+      font-family: "Segoe UI", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+      background:
+        radial-gradient(1200px 500px at 15% -10%, rgba(79, 139, 255, .14), transparent 60%),
+        radial-gradient(1000px 600px at 90% 110%, rgba(155, 92, 255, .12), transparent 60%),
+        var(--bg);
+      color: var(--ink);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      overflow-y: auto;
+      /* fits one screen normally; scrolls only on small laptops */
+    }
+
+    /* ============ HEADER ============ */
+    header {
+      flex: 0 0 auto;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 14px 26px 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, .06);
+      background: rgba(11, 16, 32, .88);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      flex: 0 0 auto;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--glow);
+    }
+
+    .brand-mark svg {
+      width: 24px;
+      height: 24px
+    }
+
+    .titles h1 {
+      font-size: 1.32rem;
+      font-weight: 650;
+      letter-spacing: .3px;
+      line-height: 1.35
+    }
+
+    .titles h1 .thin {
+      font-weight: 350;
+      color: var(--ink-dim)
+    }
+
+    .titles p {
+      font-size: .84rem;
+      color: var(--ink-dim);
+      margin-top: 3px;
+      letter-spacing: .2px
+    }
+
+    .titles .pill {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 1px 9px;
+      border-radius: 20px;
+      font-size: .68rem;
+      font-weight: 600;
+      letter-spacing: .6px;
+      background: rgba(47, 213, 128, .12);
+      color: var(--green);
+      border: 1px solid rgba(47, 213, 128, .35);
+      vertical-align: 2px;
+    }
+
+    .header-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 14px
+    }
+
+    .tech-badges {
+      display: flex;
+      gap: 8px
+    }
+
+    .badge {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 12px;
+      border-radius: 9px;
+      background: rgba(255, 255, 255, .045);
+      border: 1px solid rgba(255, 255, 255, .09);
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--ink-dim);
+    }
+
+    .badge svg {
+      width: 18px;
+      height: 18px
+    }
+
+    .cycle-note {
+      font-size: .76rem;
+      color: var(--ink-faint);
+      text-align: right;
+      line-height: 1.4;
+      border-right: 1px solid rgba(255, 255, 255, .08);
+      padding-right: 14px;
+    }
+
+    .cycle-note b {
+      color: var(--ink-dim)
+    }
+
+    button.reset {
+      padding: 8px 16px;
+      border-radius: 9px;
+      cursor: pointer;
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, .18);
+      color: var(--ink-dim);
+      font-size: .78rem;
+      font-weight: 600;
+      font-family: inherit;
+      transition: .2s;
+    }
+
+    button.reset:hover {
+      border-color: var(--accent);
+      color: var(--ink)
+    }
+
+    /* ============ PIPELINE ============ */
+    main {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      padding: 14px 26px 16px;
+      gap: 14px
+    }
+
+    .pipeline {
+      flex: 0 0 auto;
+      display: grid;
+      grid-template-columns: 1.08fr 36px .88fr 36px 1fr 36px 1.18fr;
+      align-items: stretch;
+      gap: 0;
+    }
+
+    /* connectors */
+    .connector {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative
+    }
+
+    .connector .line {
+      width: 100%;
+      height: 2px;
+      position: relative;
+      overflow: visible;
+      background: rgba(255, 255, 255, .10);
+    }
+
+    .connector .line::after {
+      content: "";
+      position: absolute;
+      right: -1px;
+      top: 50%;
+      transform: translateY(-50%);
+      border-left: 7px solid rgba(255, 255, 255, .22);
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+    }
+
+    .connector.flowing .line {
+      background: repeating-linear-gradient(90deg, var(--accent) 0 8px, transparent 8px 16px);
+      animation: flow .7s linear infinite;
+    }
+
+    .connector.flowing .line::after {
+      border-left-color: var(--accent)
+    }
+
+    .connector.done .line {
+      background: var(--green)
+    }
+
+    .connector.done .line::after {
+      border-left-color: var(--green)
+    }
+
+    @keyframes flow {
+      from {
+        background-position: 0 0
+      }
+
+      to {
+        background-position: 16px 0
+      }
+    }
+
+    /* layer cards */
+    .layer {
+      background: linear-gradient(180deg, rgba(255, 255, 255, .03), transparent 40%), var(--card);
+      border: 1px solid var(--card-edge);
+      border-radius: 16px;
+      padding: 15px 16px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      cursor: pointer;
+      position: relative;
+      transition: border-color .25s, box-shadow .25s, transform .15s;
+      min-height: 250px;
+      min-width: 0;
+      /* prevent long agent names from stretching the grid off-page */
+    }
+
+    .layer:hover {
+      transform: translateY(-2px)
+    }
+
+    .layer.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent), 0 8px 30px rgba(79, 139, 255, .18)
+    }
+
+    .layer.running {
+      border-color: rgba(79, 139, 255, .75);
+      box-shadow: var(--glow)
+    }
+
+    .layer.complete {
+      border-color: rgba(47, 213, 128, .55)
+    }
+
+    .layer.complete.selected {
+      box-shadow: 0 0 0 1px var(--green), 0 8px 30px rgba(47, 213, 128, .15)
+    }
+
+    .layer-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 11px;
+      min-width: 0
+    }
+
+    .layer-top>div:not(.layer-num) {
+      min-width: 0
+    }
+
+    .layer-num {
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .8rem;
+      font-weight: 700;
+      background: rgba(79, 139, 255, .14);
+      color: var(--accent);
+      border: 1px solid rgba(79, 139, 255, .3);
+    }
+
+    .layer.complete .layer-num {
+      background: rgba(47, 213, 128, .14);
+      color: var(--green);
+      border-color: rgba(47, 213, 128, .4)
+    }
+
+    .layer-name {
+      font-size: 1.02rem;
+      font-weight: 650;
+      line-height: 1.35;
+      letter-spacing: .4px
+    }
+
+    .layer-sub {
+      font-size: .7rem;
+      color: var(--ink-faint);
+      margin-top: 4px;
+      line-height: 1.5;
+      font-family: "Cascadia Code", ui-monospace, Menlo, monospace;
+      letter-spacing: 0;
+      overflow-wrap: break-word;
+    }
+
+    .status-chip {
+      margin-left: auto;
+      flex: 0 0 auto;
+      font-size: .68rem;
+      font-weight: 700;
+      letter-spacing: .8px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      background: rgba(255, 255, 255, .06);
+      color: var(--ink-faint);
+      border: 1px solid rgba(255, 255, 255, .1);
+    }
+
+    .layer.running .status-chip {
+      background: rgba(79, 139, 255, .15);
+      color: var(--accent);
+      border-color: rgba(79, 139, 255, .4)
+    }
+
+    .layer.complete .status-chip {
+      background: rgba(47, 213, 128, .14);
+      color: var(--green);
+      border-color: rgba(47, 213, 128, .4)
+    }
+
+    .flow-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px
+    }
+
+    .fchip {
+      font-size: .68rem;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, .05);
+      color: var(--ink-dim);
+      border: 1px solid rgba(255, 255, 255, .09);
+      font-family: "Cascadia Code", ui-monospace, Menlo, monospace;
+      letter-spacing: -.2px;
+      transition: .3s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .fchip .dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--ink-faint);
+      flex: 0 0 auto
+    }
+
+    .fchip.active {
+      background: rgba(79, 139, 255, .16);
+      color: #bcd3ff;
+      border-color: rgba(79, 139, 255, .5)
+    }
+
+    .fchip.active .dot {
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+      animation: blink 1s infinite
+    }
+
+    .fchip.done-chip {
+      color: var(--green);
+      border-color: rgba(47, 213, 128, .35)
+    }
+
+    .fchip.done-chip .dot {
+      background: var(--green)
+    }
+
+    @keyframes blink {
+      50% {
+        opacity: .35
+      }
+    }
+
+    .layer-desc {
+      font-size: .78rem;
+      color: var(--ink-dim);
+      line-height: 1.5
+    }
+
+    /* live activity line inside card */
+    .live-line {
+      min-height: 38px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: .76rem;
+      color: var(--ink-dim);
+      line-height: 1.4;
+      background: rgba(0, 0, 0, .22);
+      border: 1px solid rgba(255, 255, 255, .05);
+      border-radius: 9px;
+      padding: 6px 10px;
+    }
+
+    .live-line .msg {
+      flex: 1
+    }
+
+    .live-line.idle .msg {
+      color: var(--ink-faint)
+    }
+
+    .spinner {
+      width: 15px;
+      height: 15px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      border: 2px solid rgba(79, 139, 255, .25);
+      border-top-color: var(--accent);
+      animation: spin .8s linear infinite;
+      display: none;
+    }
+
+    .layer.running .spinner {
+      display: block
+    }
+
+    .check-icon {
+      display: none;
+      color: var(--green);
+      flex: 0 0 auto;
+      font-size: .85rem;
+      font-weight: 700
+    }
+
+    .layer.complete .check-icon {
+      display: block
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    /* progress shimmer bar */
+    .bar {
+      height: 4px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, .06);
+      overflow: hidden
+    }
+
+    .bar .fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      transition: width .5s
+    }
+
+    .layer.running .bar .fill {
+      width: 100%;
+      background: linear-gradient(90deg, rgba(79, 139, 255, .2), var(--accent), var(--accent2), rgba(79, 139, 255, .2));
+      background-size: 200% 100%;
+      animation: shimmer 1.6s linear infinite;
+    }
+
+    .layer.complete .bar .fill {
+      width: 100%;
+      background: var(--green);
+      animation: none
+    }
+
+    @keyframes shimmer {
+      from {
+        background-position: 200% 0
+      }
+
+      to {
+        background-position: -200% 0
+      }
+    }
+
+    .layer-foot {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: auto
+    }
+
+    .avg-time {
+      font-size: .74rem;
+      color: var(--ink-faint)
+    }
+
+    .avg-time b {
+      color: var(--ink-dim);
+      font-weight: 650
+    }
+
+    .elapsed {
+      font-size: .74rem;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+      display: none
+    }
+
+    .layer.running .elapsed,
+    .layer.complete .elapsed {
+      display: inline
+    }
+
+    .layer.complete .elapsed {
+      color: var(--green)
+    }
+
+    .btns {
+      margin-left: auto;
+      display: flex;
+      gap: 6px
+    }
+
+    .btn {
+      padding: 7px 15px;
+      border-radius: 8px;
+      cursor: pointer;
+      border: none;
+      font-size: .78rem;
+      font-weight: 700;
+      font-family: inherit;
+      letter-spacing: .3px;
+      transition: .2s;
+    }
+
+    .btn-run {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      box-shadow: 0 3px 14px rgba(79, 139, 255, .35);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-run:hover {
+      filter: brightness(1.12)
+    }
+
+    .btn-run:disabled {
+      opacity: .35;
+      cursor: not-allowed;
+      box-shadow: none;
+      filter: grayscale(.4)
+    }
+
+    .btn-done {
+      background: rgba(47, 213, 128, .13);
+      color: var(--green);
+      border: 1px solid rgba(47, 213, 128, .45);
+      display: none;
+    }
+
+    .btn-done:hover {
+      background: rgba(47, 213, 128, .22)
+    }
+
+    .layer.running .btn-done {
+      display: block
+    }
+
+    .layer.running .btn-run {
+      display: none
+    }
+
+    .layer.complete .btn-run,
+    .layer.complete .btn-done {
+      display: none
+    }
+
+    /* agent tag */
+    .agent-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: .68rem;
+      font-weight: 600;
+      color: #c9a7ff;
+      background: rgba(155, 92, 255, .10);
+      border: 1px solid rgba(155, 92, 255, .3);
+      padding: 3px 9px;
+      border-radius: 20px;
+    }
+
+    .agent-tag svg {
+      width: 11px;
+      height: 11px
+    }
+
+    /* ============ DETAIL PANEL ============ */
+    .detail {
+      flex: 1 1 0;
+      min-height: 280px;
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 14px;
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--card-edge);
+      border-radius: 16px;
+      padding: 18px 22px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex: 0 0 auto
+    }
+
+    .panel-head h2 {
+      font-size: 1.05rem;
+      font-weight: 650;
+      letter-spacing: .3px
+    }
+
+    .panel-head .hint {
+      font-size: .72rem;
+      color: var(--ink-faint);
+      margin-left: auto
+    }
+
+    .panel-body {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: auto;
+      font-size: .85rem;
+      line-height: 1.6;
+      color: var(--ink-dim)
+    }
+
+    .panel-body::-webkit-scrollbar {
+      width: 5px
+    }
+
+    .panel-body::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, .12);
+      border-radius: 3px
+    }
+
+    .panel-body h3 {
+      font-size: .84rem;
+      color: var(--ink);
+      margin: 12px 0 5px;
+      font-weight: 650;
+      letter-spacing: .3px
+    }
+
+    .panel-body h3:first-child {
+      margin-top: 0
+    }
+
+    .panel-body ul {
+      padding-left: 18px;
+      margin: 3px 0 7px
+    }
+
+    .panel-body li {
+      margin: 3px 0
+    }
+
+    .panel-body code {
+      font-family: "Cascadia Code", ui-monospace, Menlo, monospace;
+      font-size: .76rem;
+      background: rgba(79, 139, 255, .1);
+      color: #a9c6ff;
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+
+    .panel-body .kv {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 4px 16px;
+      margin: 5px 0 9px
+    }
+
+    .panel-body .kv b {
+      color: var(--ink);
+      font-weight: 600
+    }
+
+    table.passes {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 5px 0 9px;
+      font-size: .78rem
+    }
+
+    table.passes th,
+    table.passes td {
+      text-align: left;
+      padding: 6px 9px;
+      border-bottom: 1px solid rgba(255, 255, 255, .06);
+      vertical-align: top;
+    }
+
+    table.passes th {
+      color: var(--ink);
+      font-weight: 650;
+      font-size: .72rem;
+      letter-spacing: .4px;
+      text-transform: uppercase
+    }
+
+    table.passes td:first-child {
+      color: var(--accent);
+      font-weight: 700;
+      white-space: nowrap
+    }
+
+    /* activity log panel */
+    .log {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px
+    }
+
+    .log li {
+      display: flex;
+      gap: 9px;
+      align-items: flex-start;
+      font-size: .8rem;
+      line-height: 1.45;
+      color: var(--ink-dim);
+      padding: 6px 9px;
+      border-radius: 7px;
+      background: rgba(255, 255, 255, .025);
+      animation: slideIn .3s ease;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: background .2s, border-color .2s, box-shadow .2s, transform .2s;
+    }
+
+    .log li:hover {
+      background: rgba(79, 139, 255, .07);
+      border-color: rgba(79, 139, 255, .25);
+    }
+
+    .log li.hl {
+      background: rgba(79, 139, 255, .16);
+      border-color: var(--accent);
+      box-shadow: 0 0 14px rgba(79, 139, 255, .35);
+      color: #dce8ff;
+      transform: translateX(3px);
+    }
+
+    .log li.hl .t {
+      color: var(--accent);
+    }
+
+    .log li .t {
+      color: var(--ink-faint);
+      font-variant-numeric: tabular-nums;
+      flex: 0 0 auto;
+      font-size: .72rem;
+      padding-top: 1px
+    }
+
+    .log li.sys {
+      color: var(--ink-faint)
+    }
+
+    .log li.ok {
+      color: var(--green)
+    }
+
+    .log li.run-msg {
+      color: #bcd3ff
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(4px)
+      }
+
+      to {
+        opacity: 1;
+        transform: none
+      }
+    }
+
+    .log-empty {
+      color: var(--ink-faint);
+      font-size: .8rem;
+      padding: 8px 4px
+    }
+
+    /* ============ RESULTS STRIP ============ */
+    .results {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: var(--card);
+      border: 1px solid var(--card-edge);
+      border-radius: 14px;
+      padding: 10px 18px;
+      min-height: 56px;
+    }
+
+    .results .label {
+      font-size: .74rem;
+      font-weight: 700;
+      letter-spacing: .8px;
+      color: var(--ink-faint);
+      text-transform: uppercase;
+      flex: 0 0 auto
+    }
+
+    .outcomes {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center
+    }
+
+    .outcome {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 15px;
+      border-radius: 9px;
+      font-size: .84rem;
+      font-weight: 700;
+      opacity: .28;
+      transition: .5s;
+      border: 1px solid transparent;
+    }
+
+    .results.revealed .outcome {
+      opacity: 1
+    }
+
+    .outcome.release {
+      background: rgba(47, 213, 128, .12);
+      color: var(--green);
+      border-color: rgba(47, 213, 128, .4)
+    }
+
+    .outcome.hold {
+      background: rgba(255, 180, 84, .12);
+      color: var(--amber);
+      border-color: rgba(255, 180, 84, .4)
+    }
+
+    .outcome.reject {
+      background: rgba(255, 95, 109, .12);
+      color: var(--red);
+      border-color: rgba(255, 95, 109, .4)
+    }
+
+    .outcome .n {
+      font-size: 1rem
+    }
+
+    .reasons {
+      margin-left: auto;
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      align-items: center;
+      opacity: .28;
+      transition: .5s
+    }
+
+    .results.revealed .reasons {
+      opacity: 1
+    }
+
+    .reasons .rlabel {
+      font-size: .7rem;
+      color: var(--ink-faint);
+      margin-right: 3px
+    }
+
+    .rcode {
+      font-size: .7rem;
+      font-weight: 700;
+      font-family: "Cascadia Code", ui-monospace, Menlo, monospace;
+      padding: 2px 8px;
+      border-radius: 5px;
+      letter-spacing: -.2px;
+      background: rgba(255, 255, 255, .05);
+      color: var(--ink-dim);
+      border: 1px solid rgba(255, 255, 255, .1);
+    }
+
+    .phase2 {
+      margin-left: 14px;
+      padding-left: 14px;
+      border-left: 1px solid rgba(255, 255, 255, .08);
+      font-size: .72rem;
+      color: var(--ink-faint);
+      line-height: 1.45;
+      flex: 0 0 auto;
+    }
+
+    .phase2 b {
+      color: var(--ink-dim)
+    }
+
+    /* ============ CLICK-TO-HIGHLIGHT (all sections) ============ */
+    .results .sub-label {
+      display: block;
+      font-size: .64rem;
+      font-weight: 600;
+      letter-spacing: .3px;
+      text-transform: none;
+      color: var(--ink-faint);
+      opacity: 0;
+      transition: .5s;
+      margin-top: 2px;
+    }
+
+    .results.revealed .sub-label {
+      opacity: 1;
+      color: var(--ink-dim);
+    }
+
+    .outcome .cnt {
+      background: rgba(255, 255, 255, .14);
+      padding: 1px 9px;
+      border-radius: 12px;
+      font-size: .82rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .fchip,
+    .outcome,
+    .rcode {
+      cursor: pointer;
+    }
+
+    .fchip.hl,
+    .rcode.hl {
+      background: rgba(79, 139, 255, .22) !important;
+      border-color: var(--accent) !important;
+      color: #dce8ff !important;
+      box-shadow: 0 0 12px rgba(79, 139, 255, .45);
+    }
+
+    .outcome.hl {
+      transform: scale(1.06);
+      box-shadow: 0 0 0 2px currentColor, 0 0 18px rgba(255, 255, 255, .12);
+    }
+
+    .panel-body p,
+    .panel-body li,
+    .panel-body .kv>* {
+      cursor: pointer;
+      border-radius: 6px;
+      padding: 2px 6px;
+      transition: background .2s, box-shadow .2s;
+    }
+
+    .panel-body p:hover,
+    .panel-body li:hover,
+    .panel-body .kv>*:hover {
+      background: rgba(79, 139, 255, .06);
+    }
+
+    .panel-body p.hl,
+    .panel-body li.hl,
+    .panel-body .kv>*.hl {
+      background: rgba(79, 139, 255, .15);
+      box-shadow: inset 3px 0 0 var(--accent);
+      color: #dce8ff;
+    }
+
+    table.passes tr {
+      cursor: pointer;
+      transition: background .2s;
+    }
+
+    table.passes tr:hover td {
+      background: rgba(79, 139, 255, .05);
+    }
+
+    table.passes tr.hl td {
+      background: rgba(79, 139, 255, .15);
+      color: #dce8ff;
+    }
+
+    table.passes tr.hl td:first-child {
+      box-shadow: inset 3px 0 0 var(--accent);
+    }
+
+    @media (max-width:1100px) {
+      body {
+        overflow: auto
+      }
+
+      .pipeline {
+        grid-template-columns: 1fr;
+        gap: 10px
+      }
+
+      .connector {
+        display: none
+      }
+
+      .detail {
+        grid-template-columns: 1fr
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ================= HEADER ================= -->
+  <header>
+    <div class="brand-mark">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M12 2l2.1 5.7L20 9.8l-5.9 2.1L12 17.6l-2.1-5.7L4 9.8l5.9-2.1L12 2z" fill="#fff" />
+        <circle cx="18.5" cy="17.5" r="2.2" fill="#fff" opacity=".85" />
+        <circle cx="6" cy="18" r="1.4" fill="#fff" opacity=".6" />
+      </svg>
+    </div>
+    <div class="titles">
+      <h1>Credit Order Automation <span class="thin">· SAP VKM1 Release / Reject / Hold</span><span class="pill">PHASE 1
+          · LIVE DEMO</span></h1>
+      <p>Intelligent automation on Microsoft Power Automate · deterministic, auditable decisioning over SAP
+        credit-blocked sales orders</p>
+    </div>
+    <div class="header-right">
+      <div class="cycle-note">Scheduled cycle<br><b>every 40–45 minutes</b></div>
+      <div class="tech-badges">
+        <div class="badge" title="SAP ECC · VKM1, F.31, FBL5N">
+          <svg viewBox="0 0 40 20">
+            <path d="M0 0h40l-8 20H0z" fill="#0faaff" /><text x="6" y="14.5" font-family="Arial" font-weight="bold"
+              font-size="11" fill="#fff">SAP</text>
+          </svg>
+          SAP
+        </div>
+        <div class="badge" title="Power Automate Cloud + Desktop flows">
+          <svg viewBox="0 0 24 24">
+            <defs>
+              <linearGradient id="pa" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#1e63e9" />
+                <stop offset="1" stop-color="#7b3fe4" />
+              </linearGradient>
+            </defs>
+            <path d="M2 4h7l7 8-7 8H2l7-8L2 4z" fill="url(#pa)" />
+            <path d="M11 4h6l5 8-5 8h-6l5-8-5-8z" fill="url(#pa)" opacity=".65" />
+          </svg>
+          Power Automate
+        </div>
+        <div class="badge" title="Dataverse · CANCalculatedData & CANDecisionMatrix">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 3c5 0 9 4 9 9s-4 9-9 9-9-4-9-9 4-9 9-9z" fill="none" stroke="#12b886" stroke-width="2" />
+            <path d="M4 9c3 2.4 13 2.4 16 0M4 15c3-2.4 13-2.4 16 0" fill="none" stroke="#12b886" stroke-width="1.7" />
+          </svg>
+          Dataverse
+        </div>
+        <div class="badge" title="Named agent flows orchestrate each layer end-to-end">
+          <svg viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="5" r="2.4" fill="#b18cff" />
+            <circle cx="5" cy="18" r="2.4" fill="#b18cff" opacity=".75" />
+            <circle cx="19" cy="18" r="2.4" fill="#b18cff" opacity=".75" />
+            <path d="M12 7.5L5.8 15.8M12 7.5l6.2 8.3M7.5 18h9" stroke="#b18cff" stroke-width="1.5" opacity=".6" />
+          </svg>
+          Agent Flows
+        </div>
+      </div>
+      <button class="reset" onclick="resetDemo()">⟲ Reset Demo</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- ================= PIPELINE ================= -->
+    <div class="pipeline" id="pipeline"></div>
+
+    <!-- ================= DETAIL + LOG ================= -->
+    <div class="detail">
+      <section class="panel">
+        <div class="panel-head">
+          <h2 id="detailTitle">Pipeline Overview</h2>
+          <span class="hint">click any layer card to inspect it · press ▶ Run when the real flow starts</span>
+        </div>
+        <div class="panel-body" id="detailBody"></div>
+      </section>
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Live Run Log</h2>
+          <span class="hint" id="clock"></span>
+        </div>
+        <div class="panel-body">
+          <ul class="log" id="log"></ul>
+          <div class="log-empty" id="logEmpty">Waiting for the first layer to be started…</div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ================= RESULTS ================= -->
+    <div class="results" id="results">
+      <span class="label">Final Decision<br><span class="sub-label">43 of 116 orders decided</span></span>
+      <div class="outcomes">
+        <div class="outcome release"><span class="n">✔</span> RELEASE <span class="cnt">10</span></div>
+        <div class="outcome hold"><span class="n">⏸</span> HOLD <span class="cnt">30</span></div>
+        <div class="outcome reject"><span class="n">✖</span> REJECT <span class="cnt">3</span> <span
+            style="font-weight:400;font-size:.64rem">(auto after 3-day ageing)</span></div>
+      </div>
+      <div class="reasons">
+        <span class="rlabel">Reason codes →</span>
+        <span class="rcode">CL1</span><span class="rcode">PDDAYS1</span><span class="rcode">CL2</span>
+        <span class="rcode">PDDAYS2</span><span class="rcode">PDBALANCE</span><span class="rcode">CC</span><span
+          class="rcode">AGE&gt;3D</span>
+      </div>
+      <div class="phase2"><b>Phase 2 roadmap:</b> Action layer · Customer &amp; Manager communication · Daily reports
+      </div>
+    </div>
+  </main>
+
+  <script>
+    /* =====================================================================
+       LAYER DEFINITIONS — all demo content is data-driven from here
+    ===================================================================== */
+    const LAYERS = [
+      {
+        id: "extraction",
+        num: 1,
+        name: "Extraction Layer",
+        agent: "EXTRACTION_ORCHESTRATOR_AGENT_PHASE1",
+        avg: "~10–15 min",
+        desc: "RPA over SAP GUI. Orders → Credit Accounts → Customers → Invoices assembled into one nested payload.",
+        chips: ["VKM1_PHASE1", "F31_PHASE1", "FBL5N_PHASE1"],
+        steps: [
+          { msg: "Orchestrator agent started · attaching to SAP GUI session", chip: -1 },
+          { msg: "VKM1_PHASE1 · scraping credit-blocked sales orders + CAN — 116 orders captured this cycle", chip: 0 },
+          { msg: "VKM1_PHASE1 · order grid captured, extracting risk category & terms of payment", chip: 0 },
+          { msg: "F31_PHASE1 · resolving customers under each credit account — 289 customers identified", chip: 1 },
+          { msg: "FBL5N_PHASE1 · pulling due / paid / open invoices — 1,764 invoice lines retrieved", chip: 2 },
+          { msg: "Assembling nested payload · Orders → Customers → Invoices", chip: -1 },
+          { msg: "116 orders · 289 customers · 1,764 invoices → handed off to Validation Agent", chip: -1 },
+        ],
+        summary: "Extracted 116 orders · 289 customers · 1,764 invoices (sample cycle)",
+        detail: `
+      <h3>What this layer does</h3>
+      <p>The <code>EXTRACTION_ORCHESTRATOR_AGENT_PHASE1</code> drives three Power Automate <b>Desktop (RPA) flows</b> against the SAP GUI — exactly the steps a credit analyst performs manually today, but unattended and error-free.</p>
+      <div class="kv">
+        <b>1 · VKM1_PHASE1</b><span>Extracts all credit-blocked sales orders. Each order carries its <code>CAN</code> (Credit Account Number), risk category, terms of payment and order value.</span>
+        <b>2 · F31_PHASE1</b><span>For every CAN, identifies <b>all customers</b> belonging to that credit account.</span>
+        <b>3 · FBL5N_PHASE1</b><span>For every customer, pulls their full invoice history — due, overdue and paid line items.</span>
+      </div>
+      <h3>Output shape</h3>
+      <p>One nested JSON payload: <code>Orders[] → Customers[] → Invoices[]</code> — a complete 360° credit picture per order, ready for validation.</p>
+      <h3>Why an orchestrator agent?</h3>
+      <p>The agent sequences the three robots, handles SAP session recovery and retries, and guarantees the chain never passes partial data downstream.</p>`
+      },
+      {
+        id: "validation",
+        num: 2,
+        name: "Validation Layer",
+        agent: "VALIDATION_AGENT_PHASE1",
+        avg: "~1–2 min",
+        desc: "Data-quality gate. Mandatory-field checks split the batch into Valid and Invalid orders.",
+        chips: ["CAN", "Order No.", "PAYT", "Risk Category"],
+        steps: [
+          { msg: "Validation agent received extraction payload", chip: -1 },
+          { msg: "Checking mandatory field · CAN present on every order", chip: 0 },
+          { msg: "Checking mandatory field · Order Number integrity", chip: 1 },
+          { msg: "Checking mandatory field · Terms of Payment (PAYT)", chip: 2 },
+          { msg: "Checking mandatory field · Risk Category assignment", chip: 3 },
+          { msg: "Classifying batch → 43 Valid Orders · 73 Invalid Orders (missing mandatory fields)", chip: -1 },
+          { msg: "73 invalid orders logged for review · 43 valid orders forwarded to Transformation", chip: -1 },
+        ],
+        summary: "116 checked → 43 valid forwarded · 73 invalid logged (sample cycle)",
+        detail: `
+      <h3>What this layer does</h3>
+      <p><code>VALIDATION_AGENT_PHASE1</code> is the <b>data-quality gate</b>. No order enters decisioning unless it carries every field the rules engine needs.</p>
+      <h3>Mandatory field checks (every order)</h3>
+      <ul>
+        <li><code>CAN</code> — Credit Account Number</li>
+        <li><code>Order Number</code></li>
+        <li><code>PAYT</code> — Terms of Payment</li>
+        <li><code>Risk Category</code></li>
+        <li>…plus supporting completeness checks on customers &amp; invoices</li>
+      </ul>
+      <h3>Outcome</h3>
+      <div class="kv">
+        <b>Valid Orders</b><span>Forwarded automatically to the Transformation layer.</span>
+        <b>Invalid Orders</b><span>Logged separately with the failing field(s) — nothing is silently dropped, everything is auditable.</span>
+      </div>
+      <p>This gate is what keeps the downstream decisioning <b>deterministic and safe</b> — a key design promise of Phase 1.</p>`
+      },
+      {
+        id: "transformation",
+        num: 3,
+        name: "Transformation Layer",
+        agent: "TRANSFORMATION_AGENT_PHASE1",
+        avg: "~6–7 min",
+        desc: "Enriches each order with calculated credit metrics and business-configurable thresholds, then lands in Dataverse.",
+        chips: ["CL %", "PD Days", "Thresholds / Risk Cat.", "→ CANCalculatedData"],
+        steps: [
+          { msg: "Transformation agent received valid order set", chip: -1 },
+          { msg: "Computing CL% · credit-limit utilisation per credit account", chip: 0 },
+          { msg: "Computing PD Days · past-due ageing from invoice history", chip: 1 },
+          { msg: "Deriving remaining calculated credit metrics per order", chip: -1 },
+          { msg: "Attaching business-configurable thresholds per risk category", chip: 2 },
+          { msg: "Upserting 43 enriched rows into Dataverse · CANCalculatedData", chip: 3 },
+          { msg: "43 rows populated in CANCalculatedData · Decision layer trigger fired", chip: -1 },
+        ],
+        summary: "43 orders enriched & landed in CANCalculatedData (sample cycle)",
+        detail: `
+      <h3>What this layer does</h3>
+      <p><code>TRANSFORMATION_AGENT_PHASE1</code> converts raw SAP data into <b>decision-ready credit metrics</b>. Every valid order is enriched with calculated fields such as:</p>
+      <ul>
+        <li><code>CLPercentage</code> — credit-limit utilisation</li>
+        <li><code>PDDays</code> — past-due ageing</li>
+        <li>Exposure, balance and payment-behaviour derivations <i>(full field list available)</i></li>
+      </ul>
+      <h3>Business-owned configuration</h3>
+      <p>Thresholds are <b>not hard-coded</b>. They live in configuration keyed by <b>risk category</b> — so credit policy can differ per category and per order, and the business can tune limits <b>without touching a single flow</b>.</p>
+      <h3>Landing zone</h3>
+      <p>Everything is upserted into the Dataverse table <code>CANCalculatedData</code>. That write is the trigger for the Decision layer — clean layer separation, each stage independently re-runnable and auditable.</p>`
+      },
+      {
+        id: "decision",
+        num: 4,
+        name: "Decision Layer",
+        agent: "DECISION_ORCHESTRATOR_AGENT_PHASE1",
+        agent2: "DECISION_AGENT_CHILD_PHASE1",
+        avg: "~4 min",
+        desc: "Pass 0–6 rules engine per order. Writes CANDecisionMatrix and emits the final RELEASE / HOLD / REJECT verdict.",
+        chips: ["Pass 0 · Routing", "Pass 1–2 · Standard", "Pass 3 · 2PA", "Pass 4 · Credit Card", "Pass 5 · Escalation", "Pass 6 · Final", "→ CANDecisionMatrix"],
+        steps: [
+          { msg: "Decision orchestrator triggered by CANCalculatedData insert", chip: -1 },
+          { msg: "Fanning out orders to DECISION_AGENT_CHILD_PHASE1", chip: -1 },
+          { msg: "Pass 0 · CAN exclusion-list check (Dataverse config) — listed CANs released directly", chip: 0 },
+          { msg: "Pass 0 · routing remaining orders — credit-card / 2PA / standard pathway", chip: 0 },
+          { msg: "Pass 1 · CL% and PD-Days threshold evaluation (standard path)", chip: 1 },
+          { msg: "Pass 2 · Snowflake exception — delinquency & PD ratios for good CANs + high-limit checks", chip: 1 },
+          { msg: "Pass 3 · 2PA orders · payment-plan status & credit-card validity", chip: 2 },
+          { msg: "Pass 4 · credit-card orders · PD balance & card validity", chip: 3 },
+          { msg: "Pass 5 · flagging exception cases for manager escalation", chip: 4 },
+          { msg: "Pass 6 · consolidating pass outcomes into one final verdict per order", chip: 5 },
+          { msg: "Ageing rule · orders blocked > 3 days marked for auto-REJECT", chip: -1 },
+          { msg: "Writing 43 verdicts + reason codes into CANDecisionMatrix", chip: 6 },
+          { msg: "Final decisions issued · 10 RELEASE / 30 HOLD / 3 REJECT", chip: -1 },
+        ],
+        summary: "43 decided → 10 RELEASED · 30 ON HOLD · 3 REJECTED (sample cycle)",
+        detail: `
+      <h3>What this layer does</h3>
+      <p><code>DECISION_ORCHESTRATOR_AGENT_PHASE1</code> fans each order out to <code>DECISION_AGENT_CHILD_PHASE1</code>, which runs a multi-pass rules engine (<b>Pass 0–6</b>) and writes the outcome to <code>CANDecisionMatrix</code>.</p>
+      <table class="passes">
+        <tr><th>Pass</th><th>Rule</th><th>Applies to</th></tr>
+        <tr><td>Pass 0</td><td><b>Exclusion list &amp; routing</b> — if the CAN is on the exclusion list (business-configurable table in Dataverse), the order is <b>released directly, no further checks</b>; all others are routed to their pathway: credit-card, 2PA, or standard (Pass 1 &amp; 2)</td><td>All orders</td></tr>
+        <tr><td>Pass 1</td><td>CL% and PD-Days vs risk-category thresholds</td><td>Standard pathway</td></tr>
+        <tr><td>Pass 2</td><td>Snowflake exception for good CANs — delinquency ratio &amp; PD ratio · high-limit CL &amp; PD-Days checks</td><td>Standard pathway</td></tr>
+        <tr><td>Pass 3</td><td>Payment-plan status + credit-card validity</td><td>2PA risk category only</td></tr>
+        <tr><td>Pass 4</td><td>PD balance + card validity</td><td>Credit-card orders only</td></tr>
+        <tr><td>Pass 5</td><td><b>Manager escalation</b> — exception cases routed for review</td><td>Flagged orders</td></tr>
+        <tr><td>Pass 6</td><td><b>Consolidated decision</b> — merges pass outcomes into one final verdict</td><td>All orders</td></tr>
+      </table>
+      <h3>Pass 6 · which decision wins</h3>
+      <ul>
+        <li><b>CAN on exclusion list</b> → direct RELEASE at Pass 0, skips every other pass</li>
+        <li><b>2PA order</b> → Pass 3 decision</li>
+        <li><b>Credit-card order</b> → Pass 4 decision</li>
+        <li><b>Standard order with Snowflake exception granted</b> (delinquency ratio &amp; PD ratio) → Pass 2 decision</li>
+        <li><b>Otherwise</b> → Pass 1 decision</li>
+      </ul>
+      <h3>Verdict logic</h3>
+      <div class="kv">
+        <b>RELEASE</b><span>Order qualifies on the applicable passes.</span>
+        <b>HOLD</b><span>Default for non-qualifying orders (except 2PA path) — retried on every 40–45 min cycle.</span>
+        <b>REJECT</b><span>Automatic once an order ages past the <b>3-day</b> threshold.</span>
+      </div>
+      <p>Every verdict carries a reason code — <code>CL1</code>, <code>PDDAYS1</code>, <code>CL2</code>, <code>PDDAYS2</code>, <code>PDBALANCE</code>, <code>CC</code> — full explainability, no black box.</p>
+      <p style="margin-top:6px;color:var(--ink-faint)"><i>Note: Snowflake and 2PA source feeds are represented with controlled sample data in Phase 1; the rule paths are fully built.</i></p>`
+      }
+    ];
+
+    const OVERVIEW = `
+  <h3>End-to-end in one sentence</h3>
+  <p>Every 40–45 minutes, Power Automate agents extract credit-blocked orders from SAP <code>VKM1</code>, validate and enrich them with credit metrics, then apply a deterministic Pass 0–6 rules engine to <b>release, hold or reject</b> each order — replacing hours of manual credit-analyst effort per cycle.</p>
+  <h3>The five agents on stage today</h3>
+  <ul>
+    <li><code>EXTRACTION_ORCHESTRATOR_AGENT_PHASE1</code> — drives 3 SAP RPA robots (VKM1 · F.31 · FBL5N)</li>
+    <li><code>VALIDATION_AGENT_PHASE1</code> — mandatory-field data-quality gate</li>
+    <li><code>TRANSFORMATION_AGENT_PHASE1</code> — calculated fields + business thresholds → Dataverse</li>
+    <li><code>DECISION_ORCHESTRATOR_AGENT_PHASE1</code> + <code>DECISION_AGENT_CHILD_PHASE1</code> — Pass 0–6 verdict engine</li>
+  </ul>
+  <h3>Design principles</h3>
+  <p><b>Automated where it helps, deterministic where it matters.</b> Each layer is owned by a named agent flow that handles sequencing, hand-offs and recovery; every credit decision is rule-based, threshold-driven and fully traceable in <code>CANDecisionMatrix</code> — no black box anywhere in the chain.</p>
+  `;
+
+    /* =====================================================================
+       RENDER PIPELINE
+    ===================================================================== */
+    const state = {};   // per-layer: {status, timer, stepIdx, stepTimer, startTs}
+    let selected = null;
+
+    const pipeline = document.getElementById("pipeline");
+    // let long agent names wrap at underscores instead of mid-word
+    const wbr = s => s.replace(/_/g, "_<wbr>");
+    LAYERS.forEach((L, i) => {
+      state[L.id] = { status: "idle", stepIdx: 0 };
+      const card = document.createElement("div");
+      card.className = "layer";
+      card.id = "card-" + L.id;
+      card.onclick = (e) => { if (e.target.closest(".btn")) return; select(L.id); };
+      card.innerHTML = `
+    <div class="layer-top">
+      <div class="layer-num">${L.num}</div>
+      <div>
+        <div class="layer-name">${L.name}</div>
+        <div class="layer-sub">${wbr(L.agent)}${L.agent2 ? "<br>" + wbr(L.agent2) : ""}</div>
+      </div>
+      <span class="status-chip" id="status-${L.id}">Idle</span>
+    </div>
+    <span class="agent-tag"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="6" r="3"/><path d="M12 9v4M6 21c0-3.3 2.7-5 6-5s6 1.7 6 5" opacity=".7"/></svg>Agent Flow · Power Automate Cloud</span>
+    <div class="flow-chips">${L.chips.map((c, ci) => `<span class="fchip" id="chip-${L.id}-${ci}"><span class="dot"></span>${c}</span>`).join("")}</div>
+    <div class="layer-desc">${L.desc}</div>
+    <div class="live-line idle" id="live-${L.id}">
+      <div class="spinner"></div><span class="check-icon">✔</span>
+      <span class="msg" id="msg-${L.id}">Standing by — press Run when the flow is started</span>
+    </div>
+    <div class="bar"><div class="fill"></div></div>
+    <div class="layer-foot">
+      <span class="avg-time">avg <b>${L.avg}</b></span>
+      <span class="elapsed" id="elapsed-${L.id}">00:00</span>
+      <div class="btns">
+        <button class="btn btn-run" id="run-${L.id}" onclick="runLayer('${L.id}')">▶ Run</button>
+        <button class="btn btn-done" onclick="completeLayer('${L.id}')">✔ Complete</button>
+      </div>
+    </div>`;
+      pipeline.appendChild(card);
+      if (i < LAYERS.length - 1) {
+        const conn = document.createElement("div");
+        conn.className = "connector";
+        conn.id = "conn-" + i;
+        conn.innerHTML = `<div class="line"></div>`;
+        pipeline.appendChild(conn);
+      }
+    });
+
+    /* =====================================================================
+       DETAIL PANEL
+    ===================================================================== */
+    const detailTitle = document.getElementById("detailTitle");
+    const detailBody = document.getElementById("detailBody");
+    function select(id) {
+      selected = id;
+      document.querySelectorAll(".layer").forEach(c => c.classList.remove("selected"));
+      if (id) {
+        document.getElementById("card-" + id).classList.add("selected");
+        const L = LAYERS.find(l => l.id === id);
+        detailTitle.textContent = L.num + " · " + L.name;
+        detailBody.innerHTML = L.detail;
+      } else {
+        detailTitle.textContent = "Pipeline Overview";
+        detailBody.innerHTML = OVERVIEW;
+      }
+    }
+    select(null);
+
+    /* =====================================================================
+       RUN / COMPLETE MECHANICS
+    ===================================================================== */
+    function fmt(s) { return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); }
+    function now() { return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }); }
+
+    const logEl = document.getElementById("log");
+    const logEmpty = document.getElementById("logEmpty");
+    function addLog(text, cls) {
+      logEmpty.style.display = "none";
+      const li = document.createElement("li");
+      if (cls) li.className = cls;
+      li.innerHTML = `<span class="t">${now()}</span><span>${text}</span>`;
+      li.onclick = () => {
+        const wasHl = li.classList.contains("hl");
+        logEl.querySelectorAll("li.hl").forEach(x => x.classList.remove("hl"));
+        if (!wasHl) li.classList.add("hl");
+      };
+      logEl.prepend(li);
+      while (logEl.children.length > 60) logEl.removeChild(logEl.lastChild);
+    }
+
+    function setChips(L, activeIdx) {
+      L.chips.forEach((_, ci) => {
+        const el = document.getElementById(`chip-${L.id}-${ci}`);
+        el.classList.toggle("active", ci === activeIdx);
+      });
+    }
+
+    function runLayer(id) {
+      const L = LAYERS.find(l => l.id === id);
+      const s = state[id];
+      if (s.status !== "idle") return;
+      s.status = "running";
+      s.startTs = Date.now();
+      s.stepIdx = 0;
+
+      const card = document.getElementById("card-" + id);
+      card.classList.add("running");
+      document.getElementById("status-" + id).textContent = "Running";
+      document.getElementById("live-" + id).classList.remove("idle");
+      select(id);
+      addLog(`<b>${L.name}</b> started · ${L.agent}`, "run-msg");
+
+      // elapsed timer
+      s.timer = setInterval(() => {
+        const sec = Math.floor((Date.now() - s.startTs) / 1000);
+        document.getElementById("elapsed-" + id).textContent = fmt(sec);
+      }, 1000);
+
+      // narration: cycle through steps, then keep looping the working steps
+      const showStep = () => {
+        const step = L.steps[s.stepIdx % L.steps.length];
+        document.getElementById("msg-" + id).textContent = step.msg;
+        setChips(L, step.chip);
+        addLog(step.msg);
+        s.stepIdx++;
+      };
+      showStep();
+      s.stepTimer = setInterval(showStep, 9000);
+
+      // upstream connector flows while running
+      const idx = LAYERS.findIndex(l => l.id === id);
+      if (idx > 0) {
+        const prev = document.getElementById("conn-" + (idx - 1));
+        if (!prev.classList.contains("done")) prev.classList.add("flowing");
+      }
+    }
+
+    function completeLayer(id) {
+      const L = LAYERS.find(l => l.id === id);
+      const s = state[id];
+      if (s.status !== "running") return;
+      s.status = "complete";
+      clearInterval(s.timer);
+      clearInterval(s.stepTimer);
+
+      const card = document.getElementById("card-" + id);
+      card.classList.remove("running");
+      card.classList.add("complete");
+      document.getElementById("status-" + id).textContent = "Complete";
+      document.getElementById("msg-" + id).textContent = L.summary || L.steps[L.steps.length - 1].msg;
+      if (L.summary) addLog(L.summary, "ok");
+
+      L.chips.forEach((_, ci) => {
+        const el = document.getElementById(`chip-${L.id}-${ci}`);
+        el.classList.remove("active");
+        el.classList.add("done-chip");
+      });
+
+      const sec = Math.floor((Date.now() - s.startTs) / 1000);
+      addLog(`<b>${L.name}</b> completed in ${fmt(sec)} (demo clock)`, "ok");
+
+      const idx = LAYERS.findIndex(l => l.id === id);
+      if (idx > 0) {
+        const prev = document.getElementById("conn-" + (idx - 1));
+        prev.classList.remove("flowing");
+        prev.classList.add("done");
+      }
+      if (idx < LAYERS.length - 1) {
+        document.getElementById("conn-" + idx).classList.add("flowing");
+      }
+      if (id === "decision") {
+        document.getElementById("results").classList.add("revealed");
+        document.getElementById("conn-2").classList.remove("flowing");
+        document.getElementById("conn-2").classList.add("done");
+        addLog("CANDecisionMatrix populated · final verdicts available in Dataverse", "ok");
+      }
+    }
+
+    function resetDemo() {
+      LAYERS.forEach((L, i) => {
+        const s = state[L.id];
+        clearInterval(s.timer); clearInterval(s.stepTimer);
+        state[L.id] = { status: "idle", stepIdx: 0 };
+        const card = document.getElementById("card-" + L.id);
+        card.classList.remove("running", "complete");
+        document.getElementById("status-" + L.id).textContent = "Idle";
+        document.getElementById("live-" + L.id).classList.add("idle");
+        document.getElementById("msg-" + L.id).textContent = "Standing by — press Run when the flow is started";
+        document.getElementById("elapsed-" + L.id).textContent = "00:00";
+        L.chips.forEach((_, ci) => {
+          const el = document.getElementById(`chip-${L.id}-${ci}`);
+          el.classList.remove("active", "done-chip");
+        });
+        if (i < LAYERS.length - 1) {
+          const c = document.getElementById("conn-" + i);
+          c.classList.remove("flowing", "done");
+        }
+      });
+      document.getElementById("results").classList.remove("revealed");
+      logEl.innerHTML = "";
+      logEmpty.style.display = "block";
+      document.querySelectorAll(".hl").forEach(x => x.classList.remove("hl"));
+      select(null);
+    }
+
+    /* =====================================================================
+       CLICK-TO-HIGHLIGHT — one spotlight per section, click again to clear
+    ===================================================================== */
+    function makeHighlightable(container, selector) {
+      container.addEventListener("click", e => {
+        const t = e.target.closest(selector);
+        if (!t || !container.contains(t)) return;
+        const was = t.classList.contains("hl");
+        container.querySelectorAll(".hl").forEach(x => x.classList.remove("hl"));
+        if (!was) t.classList.add("hl");
+      });
+    }
+    makeHighlightable(pipeline, ".fchip");
+    makeHighlightable(document.getElementById("results"), ".outcome, .rcode");
+    makeHighlightable(detailBody, "li, p, tr:not(:first-child), .kv > *");
+
+    /* header clock */
+    setInterval(() => { document.getElementById("clock").textContent = now(); }, 1000);
+  </script>
+</body>
+
+</html>
