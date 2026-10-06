@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Planogram automation: end-to-end architecture</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#faf9f5;--tx:#1f1e1d;--mu:#5f5e5a;--cd:#fff;--bd:#d3d1c7;--a-bg:#E6F1FB;--a-bd:#378ADD;--a-tx:#0C447C;--h-bg:#EEEDFE;--h-bd:#7F77DD;--h-tx:#3C3489;--e-bg:#FAECE7;--e-bd:#D85A30;--e-tx:#712B13;--s-bg:#F1EFE8;--s-bd:#888780;--s-tx:#444441}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1f1e1d;--tx:#f1efe8;--mu:#b4b2a9;--cd:#2c2c2a;--bd:#5f5e5a;--a-bg:#0C447C;--a-tx:#B5D4F4;--h-bg:#3C3489;--h-tx:#CECBF6;--e-bg:#712B13;--e-tx:#F5C4B3;--s-bg:#444441;--s-tx:#D3D1C7}}
+:root[data-theme="dark"]{--bg:#1f1e1d;--tx:#f1efe8;--mu:#b4b2a9;--cd:#2c2c2a;--bd:#5f5e5a;--a-bg:#0C447C;--a-tx:#B5D4F4;--h-bg:#3C3489;--h-tx:#CECBF6;--e-bg:#712B13;--e-tx:#F5C4B3;--s-bg:#444441;--s-tx:#D3D1C7}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;padding:16px;max-width:1200px;margin:auto}
+h1{font-size:22px;font-weight:500;margin:0 0 4px}.sub{color:var(--mu);margin:0 0 12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}.chips span,.legend span{border:.5px solid var(--bd);background:var(--cd);border-radius:999px;padding:2px 10px;font-size:12px}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}.legend span{border-width:1px}
+.lane{border:.5px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:6px;background:var(--cd)}
+.lane h2{font-size:16px;font-weight:500;margin:0 0 8px}.lane h2 b{display:inline-block;min-width:24px;height:24px;line-height:24px;text-align:center;border-radius:50%;background:var(--tx);color:var(--bg);font-weight:500;font-size:13px;margin-right:8px}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px}
+.c{border:1px solid;border-radius:8px;padding:8px 10px}.c h3{font-size:14px;font-weight:500;margin:0}.c em{display:block;font-size:12px;font-style:normal;opacity:.85;margin-bottom:4px}
+.c ul{margin:0;padding-left:16px;font-size:12px}.c li{margin:1px 0}
+.a{background:var(--a-bg);border-color:var(--a-bd);color:var(--a-tx)}.h{background:var(--h-bg);border-color:var(--h-bd);color:var(--h-tx)}.e{background:var(--e-bg);border-color:var(--e-bd);color:var(--e-tx)}.s{background:var(--s-bg);border-color:var(--s-bd);color:var(--s-tx)}
+.f{text-align:center;color:var(--mu);font-size:12px;padding:2px 0 6px}
+.x{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px;margin-top:10px}
+.wide{overflow-x:auto}
+@media print{body{max-width:none}}
+</style></head><body>
+<h1>Planogram automation: end-to-end architecture (CPG, MPG, SAP XREF)</h1>
+<p class="sub">Monthly batch on Azure. SharePoint input, ADF orchestration, Azure SQL rules engine, human approvals, RPA upload to SAP.</p>
+<div class="chips"><span>Monthly cadence</span><span>60-70k rows per Excel, 3+ files</span><span>One RUN_ID end to end</span><span>Rules: Q1-Q19 (CPG), Q1-Q33 (MPG)</span><span>Azure-native, private networking</span></div>
+<div class="legend"><span class="c h" style="padding:2px 10px">Human / trigger</span><span class="c a" style="padding:2px 10px">Azure automation</span><span class="c e" style="padding:2px 10px">External team</span><span class="c s" style="padding:2px 10px">Store / supporting</span></div>
+
+<section class="lane"><h2><b>1</b>Trigger and ingest</h2><div class="g">
+<div class="c h"><h3>SharePoint Online</h3><em>Business input</em><ul><li>Folder per month: CPG/, MPG/, Common/</li><li>Library columns: Status, RunId</li><li>Folder locked after Ready is clicked</li></ul></div>
+<div class="c h"><h3>Ready / Start button</h3><em>Power Automate, "For a selected file"</em><ul><li>Checks manifest of required files</li><li>Sets Status = Submitted</li><li>HTTPS call to ADF createRun (Entra app / managed identity)</li><li>Fallback: _READY.flag file trigger</li></ul></div>
+<div class="c a"><h3>ADF master pipeline</h3><em>Orchestrator</em><ul><li>Generates RUN_ID (RUN_YYYYMM_nnn)</li><li>Guard: one active run per month</li><li>Params: month, folder, triggeredBy, fromStep</li><li>Writes ctl.pipeline_run</li></ul></div>
+<div class="c a"><h3>Copy to ADLS Gen2</h3><em>Frozen package</em><ul><li>raw/YYYY/MM/RUN_ID/CPG, MPG, PDFs, Reference</li><li>Immutable (WORM) policy, lifecycle tiering</li><li>file_registry: name, size, rows, checksum</li></ul></div>
+<div class="c s"><h3>Snowflake</h3><em>CPG / SAP reference data</em><ul><li>ADF Snowflake connector copy</li><li>Snapshot into ref.* per RUN_ID</li></ul></div>
+</div></section>
+<div class="f">▼ package frozen, run status = INGESTED</div>
+
+<section class="lane"><h2><b>2</b>CPG processing (Azure SQL)</h2><div class="g">
+<div class="c a"><h3>Staging load</h3><em>ADF Copy, bulk insert</em><ul><li>Excel from ADLS into stg.* by RUN_ID</li><li>Parallel copies, batch 100k rows</li><li>Row count reconciled to file_registry</li><li>Clean + standardise in set-based SQL</li></ul></div>
+<div class="c a"><h3>Business rules Q1-Q19</h3><em>Stored procedures, ADF ordered</em><ul><li>Item link, monthly changes, discontinued, new items</li><li>Discontinued / substitute replacements, POG updates, DN27</li><li>Order from ctl.processing_step dependencies</li><li>Set-based only, no cursors; logs rows in/out</li></ul></div>
+<div class="c a"><h3>Candidate results</h3><em>cpg.* tables</em><ul><li>Planogram Master (candidate)</li><li>Monthly New Item (candidate)</li><li>DN27 (candidate)</li></ul></div>
+<div class="c s"><h3>Azure SQL Database</h3><em>Processing engine</em><ul><li>Scale up before run, down after (ADF Web activity)</li><li>Clustered columnstore on large stg tables</li><li>Indexes on join keys (item, POG, SOG)</li></ul></div>
+</div></section>
+<div class="f">▼ validation stored procedures run</div>
+
+<section class="lane"><h2><b>3</b>CPG validation and approval (human in the loop)</h2><div class="g">
+<div class="c a"><h3>Validation</h3><em>Stored procedures</em><ul><li>Missing items, invalid codes, invalid replacements</li><li>Duplicates, POG inconsistencies, rule checks</li><li>Writes validation_result and exception</li></ul></div>
+<div class="c h"><h3>Exception review</h3><em>Power Apps over SQL views</em><ul><li>Exceptions only, never 70k rows by hand</li><li>Server-side filter and paging</li><li>Fix or resolve with reason, then revalidate (validation step only)</li></ul></div>
+<div class="c h"><h3>Approval gate</h3><em>Teams adaptive card / Approvals</em><ul><li>Summary: row counts, exception count, delta vs last month</li><li>ADF Webhook activity waits for callback (timeout 7 days)</li><li>Decision, user, time into approval_audit</li></ul></div>
+<div class="c a"><h3>Generate 3 CPG files</h3><em>ADF Copy from SQL</em><ul><li>Planogram Master Data</li><li>Monthly New Item</li><li>DN27</li><li>Saved to outputs/CPG with checksum</li></ul></div>
+</div></section>
+<div class="f">▼ status = CPG_APPROVED</div>
+
+<section class="lane"><h2><b>4</b>Handoff to external team</h2><div class="g">
+<div class="c a"><h3>Notify</h3><em>Power Automate to Teams / email</em><ul><li>Send secure link to SharePoint Outbound/RUN_ID, not attachments (60-70k-row files exceed mail limits)</li><li>Read-only access for the team</li></ul></div>
+<div class="c s"><h3>Run state</h3><em>Status = AWAITING_TEAM</em><ul><li>Pipeline ends, nothing runs while waiting</li><li>Scheduled flow sends SLA reminders</li></ul></div>
+<div class="c e"><h3>External team</h3><em>Processes the 3 files</em><ul><li>Returns processed files</li><li>Business uploads them to SharePoint (MPG/, Common/)</li></ul></div>
+</div></section>
+<div class="f">▼ second upload and "Ready for MPG" button</div>
+
+<section class="lane"><h2><b>5</b>MPG ingest and processing</h2><div class="g">
+<div class="c h"><h3>Ready for MPG button</h3><em>Power Automate</em><ul><li>Validates RUN_ID exists and CPG is approved</li><li>Manifest: Product_Listings, SOG_PDFs, Category_Adjustments</li><li>Calls ADF MPG pipeline with same RUN_ID</li></ul></div>
+<div class="c a"><h3>Copy to ADLS (frozen)</h3><em>Same run folder</em><ul><li>MPG/ and PDFs/ added, then locked</li><li>file_registry updated</li></ul></div>
+<div class="c a"><h3>Excel / CSV path</h3><em>ADF Copy</em><ul><li>Bulk load to stg.mpg_*, 60-70k rows per file</li><li>Row-count reconciliation</li></ul></div>
+<div class="c a"><h3>PDF path</h3><em>Document Intelligence + Azure Function</em><ul><li>Batch async extraction: item number, description</li><li>Durable Function (Flex Consumption / Premium) normalises output</li><li>Low confidence goes to exceptions</li></ul></div>
+<div class="c a"><h3>Business rules Q1-Q33</h3><em>Stored procedures, ADF ordered</em><ul><li>Monthly sets, category processing, largest set</li><li>Planogram processing, label construction, item counts</li><li>Validation and export generation</li></ul></div>
+</div></section>
+<div class="f">▼ MPG validation stored procedures run</div>
+
+<section class="lane"><h2><b>6</b>MPG validation, approval and XREF</h2><div class="g">
+<div class="c a"><h3>Validation</h3><em>Stored procedures</em><ul><li>Invalid item status, SOG data, description</li><li>POG mismatches, item count checks</li></ul></div>
+<div class="c h"><h3>Review and approval</h3><em>Same pattern as CPG</em><ul><li>Power Apps exceptions, Teams approval card</li><li>ADF Webhook waits, approval_audit logged</li></ul></div>
+<div class="c a"><h3>Generate SAP XREF file</h3><em>Single output</em><ul><li>Schema-validated, row count + hash recorded</li><li>Saved to outputs/MPG in ADLS</li></ul></div>
+</div></section>
+<div class="f">▼ status = MPG_APPROVED</div>
+
+<section class="lane"><h2><b>7</b>SAP upload and close</h2><div class="g">
+<div class="c a"><h3>RPA upload</h3><em>Power Automate Desktop, unattended</em><ul><li>Cloud flow queues the job to a bot VM</li><li>Credentials from Key Vault</li><li>Retries, screenshots on failure</li><li>Reconcile SAP record count to XREF</li></ul></div>
+<div class="c s"><h3>SAP and label printing</h3><em>Existing downstream process</em><ul><li>XREF loaded, labels printed</li></ul></div>
+<div class="c a"><h3>Close run</h3><em>ADF + Power Automate</em><ul><li>Status = COMPLETED</li><li>Notify stakeholders, archive package</li></ul></div>
+</div></section>
+
+<div class="x">
+<div class="c s"><h3>Scale: 60-70k rows per Excel</h3><ul><li>Never loop rows in Power Automate or Logic Apps</li><li>ADF Copy bulk loads; SQL does all transforms set-based</li><li>Stage by RUN_ID, drop or archive after retention</li><li>Large Excel is memory heavy: optionally convert to CSV/Parquet in the ingest step</li><li>Load-test at 3x volume before go-live</li></ul></div>
+<div class="c s"><h3>Control and audit tables</h3><ul><li>ctl.pipeline_run, file_registry, processing_step</li><li>validation_result, exception, approval_audit</li><li>ctl.config (rule toggles, thresholds, approvers)</li></ul></div>
+<div class="c s"><h3>Security</h3><ul><li>Entra ID RBAC, managed identities, no secrets in flows</li><li>Key Vault for keys and connection strings</li><li>Private endpoints, ADF managed VNet integration runtime</li><li>SharePoint permissions by role</li></ul></div>
+<div class="c s"><h3>Monitoring</h3><ul><li>Azure Monitor and Log Analytics, RUN_ID on every log</li><li>Alerts on failure, long run, approval pending</li><li>Run status dashboard (Workbook or Power BI)</li></ul></div>
+<div class="c s"><h3>Reliability</h3><ul><li>Idempotent steps, restart from any step with fromStep</li><li>Retries with backoff, failures raise alerts</li><li>Point-in-time restore for SQL, geo-redundant ADLS</li></ul></div>
+<div class="c s"><h3>DevOps</h3><ul><li>Bicep/Terraform infrastructure as code</li><li>ADF Git integration, CI/CD to Dev, UAT, Prod</li><li>SQL via DACPAC, tSQLt tests per rule (Q1-Q33)</li></ul></div>
+<div class="c h"><h3>Decisions to confirm</h3><ul><li>Approver roles and SLA per gate</li><li>Retention period for frozen packages</li><li>Can SAP take the XREF via IDoc/API instead of RPA?</li><li>Exact PDF volume per month</li></ul></div>
+</div>
+</body></html>
